@@ -1,3 +1,15 @@
+#!/usr/bin/python3
+"""
+******************************************
+Title       : Gesture Recognition Engine
+Description : Hand Gesture Recogniting functions
+Date        : 2-9-2022
+Author      : Siddharth Shaligram
+Version     : 0.0
+******************************************
+Change Log:
+******************************************
+"""
 import cv2
 import numpy as np
 import os
@@ -5,6 +17,7 @@ from matplotlib import pyplot as plt
 import time
 import mediapipe as mp
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import multilabel_confusion_matrix, accuracy_score
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
@@ -60,10 +73,11 @@ class Engine(object):
                     pass
 
 
-    def load_model(self,name):
+    def load_model(self,name=""):
         log_dir = os.path.join('Logs')
         tb_callback = TensorBoard(log_dir=log_dir)
-        act = self.actions
+
+
         model = Sequential()
         model.add(LSTM(64, return_sequences=True,activation='relu', input_shape=(30,63)))
         model.add(LSTM(128, return_sequences=True,activation='relu'))
@@ -71,32 +85,34 @@ class Engine(object):
         model.add(LSTM(64, return_sequences=False,activation='relu'))
         model.add(Dense(64, activation='relu'))
         model.add(Dense(32,activation='relu'))
-        model.add(Dense(act.shape[0],activation='softmax'))
+        model.add(Dense(self.actions.shape[0],activation='softmax'))
         model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
-        model.load_weights('actionv1.h5')
+        if name != "":
+            model.load_weights(name)
+
         return tb_callback, model
 
     def train_mode(self, model):
-        label_map = {label:num for num, label in enumerate(actions)}
+        label_map = {label:num for num, label in enumerate(self.actions)}
 
         sequences, labels = [],[]
-        for action in actions:
+        for action in self.actions:
             for sequence in range(self.no_sequence):
                 window=[]
                 for frame_num in range(self.sequence_length):
-                    res = np.load(os.path.join(DATA_PATH,action,str(sequence),"{}.npy".format(frame_num)))
+                    res = np.load(os.path.join(self.DATA_PATH,action,str(sequence),"{}.npy".format(frame_num)))
                     window.append(res)
                 sequences.append(window)
                 labels.append(label_map[action])
 
         x= np.array(sequences)
         y = to_categorical(labels).astype(int)
-        tb_callback, model = engine.load_model()
+        tb_callback, model = self.load_model()
         x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.05)
         res = [.7,0.2,0.1]
         model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
-        model.fit(x_train, y_train, epochs=2000, callbacks=[tb_callback])
-        # model.save('action.h5')
+        model.fit(x_train, y_train, epochs=3000, callbacks=[tb_callback])
+        model.save('actionv3.h5')
         print(model.summary())
 
         return x_test, y_test
@@ -106,5 +122,7 @@ class Engine(object):
         ytrue = np.argmax(y_test,axis=1).tolist()
         yhat = np.argmax(yhat, axis=1).tolist()
         conf_matrix = multilabel_confusion_matrix(ytrue,yhat)
+        acc = 'xx'
+        # loss, acc = model.evaluate(x_test, y_test, verbose=2)
         accuracy = accuracy_score(ytrue, yhat)
-        return conf_matrix, accuracy
+        return conf_matrix, accuracy, acc
