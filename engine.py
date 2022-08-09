@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 """
 ******************************************
 Title       : Gesture Recognition Engine
@@ -16,8 +16,8 @@ import os
 from matplotlib import pyplot as plt
 import time
 import mediapipe as mp
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import multilabel_confusion_matrix, accuracy_score
+#from sklearn.model_selection import train_test_split
+#from sklearn.metrics import multilabel_confusion_matrix, accuracy_score
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
@@ -34,7 +34,7 @@ class Engine(object):
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
         self.DATA_PATH = os.path.join('MP_Data') #path for exported data, numpy arrays
-        self.actions = np.array(['forward', 'backward','left','right','stop','rest'])     # actions list
+        self.actions = np.array(['forward', 'backward','left','right','spin','stop','rest'])     # actions list
         self.no_sequence = 30     #30 videos of data
         self.sequence_length = 30     # 30 frames each
 
@@ -88,6 +88,7 @@ class Engine(object):
         model.add(Dense(self.actions.shape[0],activation='softmax'))
         model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
         if name != "":
+            name = '/home/lunet/cosms2/catkin_ws/src/project/scripts/'+name
             model.load_weights(name)
 
         return tb_callback, model
